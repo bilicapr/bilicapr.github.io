@@ -36,6 +36,11 @@
     .hidden {
       display: none;
     }
+    .error {
+      color: #d93025;
+      font-size: 14px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -43,34 +48,83 @@
   <div class="container" id="normalPage">
     <h2>跳转中...</h2>
     <p>正在为您跳转，请稍候...</p>
+    <p id="redirect-url" style="word-break: break-all; font-size: 14px; color: #666;"></p>
+    <p class="error" id="error-msg"></p>
   </div>
 
   <div class="container" id="warningPage">
     <h2>⚠️ 无法跳转</h2>
     <p>检测到您正在使用 QQ 或微信浏览器，无法直接跳转。</p>
     <p>请点击右上角菜单，选择在 <strong>外部浏览器</strong> 中打开。</p>
-    <a href="https://e.bilicapr.cn" class="btn" target="_blank">点击手动打开</a>
+    <a href="#" class="btn" id="manual-link" target="_blank">点击手动打开</a>
   </div>
 
   <script>
-    // 目标跳转 URL
-    const redirectUrl = "https://e.bilicapr.cn";
+    // 从 URL 获取参数
+    function getUrlParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
 
-    // 检测是否在微信或QQ浏览器中
+    // 检测是否在微信或QQ浏览器
     function isWechatOrQQ() {
       const ua = navigator.userAgent.toLowerCase();
-      return (ua.includes('micromessenger') || ua.includes('qq'));
+      return ua.includes('micromessenger') || ua.includes('qq');
     }
 
-    // 控制显示
-    if (isWechatOrQQ()) {
-      document.getElementById('normalPage').classList.add('hidden');
-      document.getElementById('warningPage').classList.remove('hidden');
-    } else {
-      document.getElementById('warningPage').classList.add('hidden');
-      // 自动跳转
-      window.location.href = redirectUrl;
+    // 验证 URL 是否合法（仅允许 http/https）
+    function isValidUrl(url) {
+      try {
+        const u = new URL(url);
+        return u.protocol === "http:" || u.protocol === "https:";
+      } catch {
+        return false;
+      }
     }
+
+    // 主逻辑
+    (function () {
+      const redirectUrl = getUrlParam('url');
+
+      // 显示手动链接（即使无效也显示错误）
+      const manualLink = document.getElementById('manual-link');
+      manualLink.href = 'javascript:void(0)';
+      manualLink.onclick = function () {
+        if (isValidUrl(redirectUrl)) {
+          window.open(redirectUrl, '_blank');
+        } else {
+          alert('无效的跳转地址！');
+        }
+      };
+
+      const errorMsg = document.getElementById('error-msg');
+      const redirectText = document.getElementById('redirect-url');
+
+      // 检查 URL 是否有效
+      if (!redirectUrl) {
+        errorMsg.textContent = '错误：缺少 url 参数，例如 ?url=https://example.com';
+        return;
+      }
+
+      if (!isValidUrl(redirectUrl)) {
+        errorMsg.textContent = '错误：url 必须以 http:// 或 https:// 开头';
+        return;
+      }
+
+      // 显示目标地址
+      redirectText.textContent = redirectUrl;
+
+      // 检测微信/QQ
+      if (isWechatOrQQ()) {
+        document.getElementById('normalPage').classList.add('hidden');
+        document.getElementById('warningPage').classList.remove('hidden');
+        manualLink.href = redirectUrl; // 可点击
+      } else {
+        // 正常浏览器：直接跳转
+        document.getElementById('warningPage').classList.add('hidden');
+        window.location.replace(redirectUrl);
+      }
+    })();
   </script>
 
 </body>
